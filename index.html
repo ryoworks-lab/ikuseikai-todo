@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>育成会ToDo管理 - 北代田町子ども育成会</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;background:#FAFAF9;-webkit-text-size-adjust:100%}
+    #root{max-width:480px;margin:0 auto;min-height:100vh;position:relative}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    .todo-item{animation:fadeIn .3s ease}
+    .role-tab{transition:all .2s ease;cursor:pointer;border:none;outline:none;-webkit-tap-highlight-color:transparent}
+    .role-tab:active{transform:scale(.95)}
+    .check-btn{transition:all .15s ease;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    .check-btn:active{transform:scale(.9)}
+    .action-btn{transition:all .15s ease;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    .action-btn:active{transform:scale(.95)}
+    textarea,input{font-family:'Noto Sans JP',sans-serif}
+    .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200}
+    .modal{background:#fff;border-radius:16px;padding:24px;max-width:320px;width:90%;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyDjy8CyAUCWtkRKx0HoUUra-p6qFqIE16Y",
+  authDomain:"ikuseikai-todo.firebaseapp.com",
+  databaseURL:"https://ikuseikai-todo-default-rtdb.firebaseio.com",
+  projectId:"ikuseikai-todo",
+  storageBucket:"ikuseikai-todo.firebasestorage.app",
+  messagingSenderId:"1057548671972",
+  appId:"1:1057548671972:web:c35d5b1e07d507233805f1"
+});
+var db=firebase.database();
+var e=React.createElement,useState=React.useState,useEffect=React.useEffect,useCallback=React.useCallback;
+var ROLES=[
+  {id:"chairman",label:"会長（副会長含む）",short:"会長",color:"#C41E3A",icon:"👑"},
+  {id:"accountant",label:"会計",short:"会計",color:"#1B6B3A",icon:"💰"},
+  {id:"secretary",label:"書記",short:"書記",color:"#1A4B8C",icon:"📝"},
+  {id:"pta",label:"PTA担当",short:"PTA担当",color:"#B8560F",icon:"🏫"},
+  {id:"nanako",label:"南子連担当",short:"南子連",color:"#6B21A8",icon:"🤝"}
+];
+var INIT={
+  chairman:[
+    {id:"c1",text:"通帳の名義変更（総会の資料が必要）",done:false,note:""},
+    {id:"c2",text:"ビクトリー・ミニバスへの助成金を渡す",done:false,note:""},
+    {id:"c3",text:"書画展の出品者への半紙・画用紙の配布方法、優秀作品への景品を検討",done:false,note:""},
+    {id:"c4",text:"ラジオ体操の開催の是非について意見をまとめる",done:false,note:""},
+    {id:"c5",text:"納涼祭の模擬店の出し物について役員で意見を集約→4団体会議で協議",done:false,note:""},
+    {id:"c6",text:"本部役員会議の開催是非を決定（4月・5月は会費徴収なしのため不要の可能性あり）",done:false,note:""},
+    {id:"c7",text:"齊田会長がイニシアチブを取って進める（山口さんより引継ぎ）",done:false,note:""}
+  ],
+  accountant:[{id:"a1",text:"中Pからの繰越金を預かり次第、通帳に入金",done:false,note:""}],
+  secretary:[
+    {id:"s1",text:"5月会報の作成",done:false,note:""},
+    {id:"s2",text:"保険の書類作成・申請・納金（南子連担当と連携）",done:false,note:""},
+    {id:"s3",text:"会長経由でミニバス・ビクトリー所属の名簿を受け取る",done:false,note:""},
+    {id:"s4",text:"ミニバス・ビクトリーの町外の子どもの追加加入申込書を作成",done:false,note:""},
+    {id:"s5",text:"4月上旬の締切までに現時点の名簿内容で保険申込み～支払いまで行う",done:false,note:""},
+    {id:"s6",text:"保険料を持って南橘公民館へ手続き",done:false,note:""},
+    {id:"s7",text:"5月以降の追加加入者の手続き（転入者・補欠役員等）",done:false,note:""},
+    {id:"s8",text:"年間行事計画の追加（前年度は新しい行事が年度途中で増えた為）",done:false,note:""}
+  ],
+  pta:[{id:"p1",text:"付属小の新一年生のお祝い品を配布",done:false,note:""}],
+  nanako:[
+    {id:"n1",text:"来年度の保険の書類作成・申請・納金（書記と連携）",done:false,note:""},
+    {id:"n2",text:"南子連の回覧物・会報・育成会のお知らせ等は原本を自治会に持っていく",done:false,note:""}
+  ]
+};
+var NOTES=[
+  "回覧板は毎月1日にまわります。載せたい時は前月の20日くらいまでに自治会へ。",
+  "コピーは自治会でやってくれます。",
+  "青色防犯パトロールの当番表を本部役員で共有済み。",
+  "育成会のファイルに「育成会本部役員業務一覧」あり。確認してください。",
+  "保険の不明点は公民館の松井さんに問合せ。",
+  "保険加入対象：①本部役員（相談役含む）②組役員 ③会員の子ども ④ミニバス町外の子 ⑤ビクトリー町外の子"
+];
+var PATH="ikuseikai-todos";
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function App(){
+  var _t=useState(null),todos=_t[0],setTodos=_t[1];
+  var _r=useState("chairman"),activeRole=_r[0],setActiveRole=_r[1];
+  var _n=useState(""),newText=_n[0],setNewText=_n[1];
+  var _sa=useState(false),showAdd=_sa[0],setShowAdd=_sa[1];
+  var _l=useState(true),loading=_l[0],setLoading=_l[1];
+  var _sn=useState(false),showNotes=_sn[0],setShowNotes=_sn[1];
+  var _en=useState(null),editNoteId=_en[0],setEditNoteId=_en[1];
+  var _nt=useState(""),noteText=_nt[0],setNoteText=_nt[1];
+  var _cd=useState(null),confirmDel=_cd[0],setConfirmDel=_cd[1];
+  var _sr=useState(false),showReset=_sr[0],setShowReset=_sr[1];
+  var _co=useState(true),connected=_co[0],setConnected=_co[1];
+  var _er=useState(null),error=_er[0],setError=_er[1];
+  useEffect(function(){
+    var ref=db.ref(PATH);
+    var connRef=db.ref(".info/connected");
+    connRef.on("value",function(s){setConnected(!!s.val())});
+    ref.on("value",function(snap){
+      var d=snap.val();
+      if(d){setTodos(d)}else{ref.set(INIT);setTodos(INIT)}
+      setLoading(false);setError(null);
+    },function(err){
+      console.error(err);
+      setError("データベースに接続できません。Firebase Realtime Databaseの設定を確認してください。");
+      setTodos(INIT);setLoading(false);
+    });
+    return function(){ref.off();connRef.off()};
+  },[]);
+  var save=useCallback(function(t){setTodos(t);db.ref(PATH).set(t)},[]);
+  function toggle(rid,tid){var u=clone(todos);u[rid]=u[rid].map(function(t){return t.id===tid?Object.assign({},t,{done:!t.done}):t});save(u)}
+  function addTodo(){if(!newText.trim())return;var u=clone(todos);if(!u[activeRole])u[activeRole]=[];u[activeRole].push({id:activeRole[0]+Date.now(),text:newText.trim(),done:false,note:""});save(u);setNewText("");setShowAdd(false)}
+  function delTodo(rid,tid){var u=clone(todos);u[rid]=u[rid].filter(function(t){return t.id!==tid});save(u);setConfirmDel(null)}
+  function saveNt(rid,tid){var u=clone(todos);u[rid]=u[rid].map(function(t){return t.id===tid?Object.assign({},t,{note:noteText}):t});save(u);setEditNoteId(null);setNoteText("")}
+  function resetAll(){save(INIT);setShowReset(false)}
+  if(loading||!todos){return e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh"}},e("div",{style:{textAlign:"center"}},e("div",{style:{fontSize:40,marginBottom:12,animation:"spin 1s linear infinite"}},"🔄"),e("p",{style:{color:"#78716C",fontSize:14}},"読み込み中...")))}
+  var rd=ROLES.find(function(r){return r.id===activeRole});
+  var rt=todos[activeRole]||[];
+  var dc=rt.filter(function(t){return t.done}).length;
+  var tc=rt.length;
+  var at=Object.values(todos).flat().length;
+  var ad=Object.values(todos).flat().filter(function(t){return t.done}).length;
+  return e("div",null,
+    error&&e("div",{style:{background:"#FEF2F2",padding:"10px 16px",textAlign:"center",fontSize:12,color:"#DC2626",lineHeight:1.6}},"⚠️ "+error),
+    !connected&&!error&&e("div",{style:{background:"#FFFBEB",padding:"6px 16px",textAlign:"center",fontSize:11,color:"#92400E"}},"⚠️ オフライン — 再接続中..."),
+    e("div",{style:{background:"linear-gradient(135deg,#1C1917,#292524)",padding:"24px 20px 20px",color:"#fff"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
+        e("div",null,e("div",{style:{fontSize:11,letterSpacing:2,color:"#A8A29E",marginBottom:4}},"北代田町子ども育成会"),e("h1",{style:{fontSize:22,fontWeight:700,letterSpacing:-.5}},"ToDo管理")),
+        e("div",{style:{textAlign:"right"}},e("div",{style:{fontSize:11,color:"#A8A29E"}},"令和7年度"),e("div",{style:{fontSize:24,fontWeight:700,color:ad===at&&at>0?"#4ADE80":"#F59E0B"}},ad+"/"+at))),
+      e("div",{style:{marginTop:16,background:"#44403C",borderRadius:99,height:6,overflow:"hidden"}},e("div",{style:{width:at>0?((ad/at)*100)+"%":"0%",background:"linear-gradient(90deg,#4ADE80,#22D3EE)",height:"100%",borderRadius:99,transition:"width .5s ease"}})),
+      e("div",{style:{display:"flex",justifyContent:"space-between",marginTop:6}},e("span",{style:{fontSize:10,color:"#78716C"}},connected?"🟢 リアルタイム同期中":"🔴 オフライン"),e("span",{style:{fontSize:10,color:"#78716C"}},at>0?Math.round((ad/at)*100)+"% 完了":"0% 完了"))),
+    e("div",{style:{display:"flex",gap:6,padding:"12px 12px 0",overflowX:"auto",WebkitOverflowScrolling:"touch"}},
+      ROLES.map(function(role){var rrt=todos[role.id]||[];var rrd=rrt.filter(function(t){return t.done}).length;var act=activeRole===role.id;
+        return e("button",{key:role.id,className:"role-tab",onClick:function(){setActiveRole(role.id);setShowAdd(false);setEditNoteId(null);setConfirmDel(null)},
+          style:{padding:"8px 12px",borderRadius:10,background:act?role.color:"#fff",color:act?"#fff":"#57534E",fontSize:12,fontWeight:act?600:400,whiteSpace:"nowrap",boxShadow:act?"0 2px 8px "+role.color+"40":"0 1px 3px rgba(0,0,0,.06)",display:"flex",alignItems:"center",gap:4,flexShrink:0}},
+          e("span",null,role.icon),e("span",null,role.short),e("span",{style:{background:act?"rgba(255,255,255,.25)":"#F5F5F4",padding:"1px 6px",borderRadius:99,fontSize:10,fontWeight:600}},rrd+"/"+rrt.length))})),
+    e("div",{style:{padding:"16px 20px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}},
+      e("div",null,e("h2",{style:{fontSize:16,fontWeight:600,color:rd.color}},rd.icon+" "+rd.label),e("p",{style:{fontSize:11,color:"#A8A29E",marginTop:2}},dc===tc&&tc>0?"全て完了！":(tc-dc)+"件 未完了")),
+      e("button",{className:"action-btn",onClick:function(){setShowNotes(!showNotes)},style:{padding:"6px 12px",borderRadius:8,border:"1px solid #E7E5E4",background:showNotes?"#1C1917":"#fff",color:showNotes?"#fff":"#57534E",fontSize:11,fontWeight:500}},"📋 共通メモ")),
+    showNotes&&e("div",{style:{margin:"0 16px 12px",padding:16,background:"#FFFBEB",borderRadius:12,border:"1px solid #FDE68A",animation:"slideUp .3s ease"}},
+      e("h3",{style:{fontSize:13,fontWeight:600,color:"#92400E",marginBottom:10}},"📋 全役員共通メモ"),
+      NOTES.map(function(n,i){return e("p",{key:i,style:{fontSize:12,color:"#78716C",marginBottom:6,lineHeight:1.6,paddingLeft:8,borderLeft:"2px solid #FDE68A"}},n)})),
+    e("div",{style:{padding:"4px 16px 120px"}},
+      rt.map(function(todo){
+        return e("div",{key:todo.id,className:"todo-item",style:{background:"#fff",borderRadius:12,padding:"14px 16px",marginBottom:8,boxShadow:"0 1px 3px rgba(0,0,0,.04)",border:confirmDel===todo.id?"2px solid #EF4444":"1px solid "+(todo.done?"#D6D3D1":"#E7E5E4"),opacity:todo.done?.6:1,transition:"all .3s ease"}},
+          confirmDel===todo.id&&e("div",{style:{background:"#FEF2F2",borderRadius:8,padding:"10px 12px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}},
+            e("span",{style:{fontSize:12,color:"#DC2626",fontWeight:500}},"削除しますか？"),
+            e("div",{style:{display:"flex",gap:6}},
+              e("button",{className:"action-btn",onClick:function(){delTodo(activeRole,todo.id)},style:{padding:"5px 14px",borderRadius:6,background:"#DC2626",color:"#fff",border:"none",fontSize:12,fontWeight:600}},"削除する"),
+              e("button",{className:"action-btn",onClick:function(){setConfirmDel(null)},style:{padding:"5px 12px",borderRadius:6,background:"#fff",color:"#78716C",border:"1px solid #E7E5E4",fontSize:12}},"キャンセル"))),
+          e("div",{style:{display:"flex",gap:12,alignItems:"flex-start"}},
+            e("button",{className:"check-btn",onClick:function(){toggle(activeRole,todo.id)},style:{width:26,height:26,borderRadius:8,border:"2px solid "+(todo.done?rd.color:"#D6D3D1"),background:todo.done?rd.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,color:"#fff",fontSize:14}},todo.done?"✓":null),
+            e("div",{style:{flex:1,minWidth:0}},
+              e("p",{style:{fontSize:14,fontWeight:500,color:todo.done?"#A8A29E":"#1C1917",textDecoration:todo.done?"line-through":"none",lineHeight:1.5}},todo.text),
+              todo.note&&editNoteId!==todo.id&&e("p",{style:{fontSize:12,color:"#78716C",marginTop:6,padding:"6px 10px",background:"#F5F5F4",borderRadius:6,lineHeight:1.5}},"💬 "+todo.note),
+              editNoteId===todo.id&&e("div",{style:{marginTop:8}},
+                e("textarea",{value:noteText,onChange:function(ev){setNoteText(ev.target.value)},placeholder:"メモを入力...",style:{width:"100%",padding:10,border:"1px solid "+rd.color+"60",borderRadius:8,fontSize:13,resize:"vertical",minHeight:60,outline:"none",lineHeight:1.5}}),
+                e("div",{style:{display:"flex",gap:6,marginTop:6}},
+                  e("button",{className:"action-btn",onClick:function(){saveNt(activeRole,todo.id)},style:{padding:"5px 14px",borderRadius:6,background:rd.color,color:"#fff",border:"none",fontSize:12,fontWeight:600}},"保存"),
+                  e("button",{className:"action-btn",onClick:function(){setEditNoteId(null);setNoteText("")},style:{padding:"5px 14px",borderRadius:6,background:"#F5F5F4",color:"#78716C",border:"none",fontSize:12}},"キャンセル")))),
+            e("div",{style:{display:"flex",gap:4,flexShrink:0}},
+              e("button",{className:"action-btn",onClick:function(){if(editNoteId===todo.id){setEditNoteId(null)}else{setEditNoteId(todo.id);setNoteText(todo.note||"");setConfirmDel(null)}},style:{width:28,height:28,borderRadius:6,border:"1px solid #E7E5E4",background:editNoteId===todo.id?"#1C1917":"#fff",color:editNoteId===todo.id?"#fff":"#A8A29E",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}},"💬"),
+              e("button",{className:"action-btn",onClick:function(){setConfirmDel(confirmDel===todo.id?null:todo.id)},style:{width:28,height:28,borderRadius:6,border:"1px solid #E7E5E4",background:confirmDel===todo.id?"#FEF2F2":"#fff",color:"#A8A29E",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}},"🗑"))))}),
+      rt.length===0&&e("div",{style:{textAlign:"center",padding:"40px 20px",color:"#A8A29E"}},e("div",{style:{fontSize:36,marginBottom:8}},"✨"),e("p",{style:{fontSize:14}},"ToDoはありません")),
+      showAdd&&e("div",{style:{background:"#fff",borderRadius:12,padding:16,marginBottom:8,boxShadow:"0 1px 3px rgba(0,0,0,.04)",border:"2px solid "+rd.color+"40",animation:"slideUp .2s ease"}},
+        e("textarea",{autoFocus:true,value:newText,onChange:function(ev){setNewText(ev.target.value)},placeholder:"新しいToDoを入力...",onKeyDown:function(ev){if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();addTodo()}},style:{width:"100%",padding:10,border:"1px solid #E7E5E4",borderRadius:8,fontSize:14,resize:"vertical",minHeight:50,outline:"none",lineHeight:1.5}}),
+        e("div",{style:{display:"flex",gap:6,marginTop:10,justifyContent:"flex-end"}},
+          e("button",{className:"action-btn",onClick:function(){setShowAdd(false);setNewText("")},style:{padding:"8px 16px",borderRadius:8,background:"#F5F5F4",color:"#78716C",border:"none",fontSize:13}},"キャンセル"),
+          e("button",{className:"action-btn",onClick:addTodo,style:{padding:"8px 20px",borderRadius:8,background:rd.color,color:"#fff",border:"none",fontSize:13,fontWeight:600}},"追加")))),
+    showReset&&e("div",{className:"overlay",onClick:function(){setShowReset(false)}},
+      e("div",{className:"modal",onClick:function(ev){ev.stopPropagation()}},
+        e("h3",{style:{fontSize:16,fontWeight:600,color:"#1C1917",marginBottom:8}},"リセット確認"),
+        e("p",{style:{fontSize:13,color:"#78716C",lineHeight:1.6,marginBottom:20}},"全てのToDoを初期状態に戻します。チェック済みの項目やメモも全てリセットされます。よろしいですか？"),
+        e("div",{style:{display:"flex",gap:8,justifyContent:"flex-end"}},
+          e("button",{className:"action-btn",onClick:function(){setShowReset(false)},style:{padding:"8px 16px",borderRadius:8,background:"#F5F5F4",color:"#78716C",border:"none",fontSize:13}},"キャンセル"),
+          e("button",{className:"action-btn",onClick:resetAll,style:{padding:"8px 20px",borderRadius:8,background:"#DC2626",color:"#fff",border:"none",fontSize:13,fontWeight:600}},"リセットする")))),
+    e("div",{style:{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",display:"flex",gap:10,zIndex:100}},
+      e("button",{className:"action-btn",onClick:function(){setShowReset(true)},style:{padding:"12px 18px",borderRadius:99,background:"#fff",color:"#78716C",border:"1px solid #E7E5E4",fontSize:13,fontWeight:500,boxShadow:"0 4px 12px rgba(0,0,0,.1)"}},"🔄 リセット"),
+      e("button",{className:"action-btn",onClick:function(){setShowAdd(!showAdd);setConfirmDel(null)},style:{padding:"12px 24px",borderRadius:99,background:rd.color,color:"#fff",border:"none",fontSize:14,fontWeight:600,boxShadow:"0 4px 16px "+rd.color+"50",display:"flex",alignItems:"center",gap:6}},e("span",{style:{fontSize:18,lineHeight:1}},"+")," ToDo追加")))
+}
+ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+</script>
+</body>
+</html>
