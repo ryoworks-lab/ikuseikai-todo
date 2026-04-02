@@ -3,348 +3,169 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>育成会スケジュール</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;background:#FAFAF9;-webkit-text-size-adjust:100%}#root{max-width:480px;margin:0 auto;min-height:100vh;position:relative}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.action-btn{transition:all .15s ease;cursor:pointer;-webkit-tap-highlight-color:transparent;border:none;outline:none}.action-btn:active{transform:scale(.95)}
-textarea,input,select{font-family:'Noto Sans JP',sans-serif}
-.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200}
-.modal{background:#fff;border-radius:16px;padding:20px;max-width:360px;width:92%;box-shadow:0 8px 30px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
-.cal-cell{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s}
-.cal-cell:active{background:rgba(0,0,0,.05)!important}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,sans-serif;background:#FAFAF9}
+#app{max-width:480px;margin:0 auto}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="app"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
-firebase.initializeApp({apiKey:"AIzaSyDjy8CyAUCWtkRKx0HoUUra-p6qFqIE16Y",authDomain:"ikuseikai-todo.firebaseapp.com",databaseURL:"https://ikuseikai-todo-default-rtdb.firebaseio.com",projectId:"ikuseikai-todo",storageBucket:"ikuseikai-todo.firebasestorage.app",messagingSenderId:"1057548671972",appId:"1:1057548671972:web:c35d5b1e07d507233805f1"});
-var db=firebase.database(),e=React.createElement,useState=React.useState,useEffect=React.useEffect,useCallback=React.useCallback;
+var h=React.createElement;
 
-var ROLES=[
-{id:“chairman”,label:“会長”,color:”#C41E3A”},
-{id:“vice”,label:“副会長”,color:”#E8456B”},
-{id:“all_hq”,label:“本部役員(全)”,color:”#D97706”},
-{id:“hq_one”,label:“本部役員1名”,color:”#EA580C”},
-{id:“all_both”,label:“本部・組役員(全)”,color:”#0891B2”},
-{id:“kumi_one”,label:“組役員1名”,color:”#059669”},
-{id:“nanako”,label:“南子連役員”,color:”#6B21A8”},
-{id:“other”,label:“その他”,color:”#6B7280”}
-];
-var RC={};ROLES.forEach(function(r){RC[r.id]=r});
+try{
+firebase.initializeApp({
+apiKey:“AIzaSyDjy8CyAUCWtkRKx0HoUUra-p6qFqIE16Y”,
+authDomain:“ikuseikai-todo.firebaseapp.com”,
+databaseURL:“https://ikuseikai-todo-default-rtdb.firebaseio.com”,
+projectId:“ikuseikai-todo”,
+storageBucket:“ikuseikai-todo.firebasestorage.app”,
+messagingSenderId:“1057548671972”,
+appId:“1:1057548671972:web:c35d5b1e07d507233805f1”
+});
+}catch(e){document.getElementById(“app”).textContent=“Firebase error: “+e.message;}
 
-var WDAY=[“月”,“火”,“水”,“木”,“金”,“土”,“日”];
-var MNAMES=[“1月”,“2月”,“3月”,“4月”,“5月”,“6月”,“7月”,“8月”,“9月”,“10月”,“11月”,“12月”];
+var db=firebase.database();
 
 var INIT=[
-{t:“南子連定期総会”,d:“2026-04-11”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“赤城白川除草作業”,d:“2026-04-11”,r:“kumi_one”,desc:“組役員1名”},
-{t:“中央公園清掃”,d:“2026-04-12”,r:“hq_one”,desc:“本部役員1名”},
-{t:“育成会本部会議”,d:“2026-04-19”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“各種団体合同会議”,d:“2026-05-09”,r:“chairman”,desc:“会長・副会長”},
-{t:“赤城白川除草作業”,d:“2026-05-09”,r:“kumi_one”,desc:“組役員1名”},
-{t:“廃品回収（体協主催）”,d:“2026-05-10”,r:“chairman”,desc:“会長・本部役員2名”},
-{t:“南子連定例会議”,d:“2026-05-14”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“育成会本部会議”,d:“2026-05-17”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“さつま苗植え”,d:“2026-05-23”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“北代田町社会福祉協議会総会”,d:“2026-05-24”,r:“chairman”,desc:“会長”},
-{t:“細井ヴィクトリー総会”,d:“2026-05-24”,r:“chairman”,desc:“会長”},
-{t:“南子連定例会議”,d:“2026-06-04”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“中央公園清掃”,d:“2026-06-07”,r:“hq_one”,desc:“本部役員1名”},
-{t:“4団体会議（納涼祭）”,d:“2026-06-07”,r:“chairman”,desc:“会長・副会長”},
-{t:“インリーダー講習会”,d:“2026-06-07”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“インリーダー講習会”,d:“2026-06-13”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“赤城白川除草作業”,d:“2026-06-13”,r:“kumi_one”,desc:“組役員1名”},
-{t:“登下校パトロール会議”,d:“2026-06-14”,r:“chairman”,desc:“会長”},
-{t:“育成会本部会議”,d:“2026-06-14”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“じゃが芋掘り体験”,d:“2026-06-21”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“4団体会議（納涼祭）”,d:“2026-06-27”,r:“chairman”,desc:“会長・副会長”},
-{t:“南子連定例会議”,d:“2026-07-02”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“4団体会議（納涼祭）”,d:“2026-07-05”,r:“chairman”,desc:“会長・副会長”},
-{t:“赤城白川除草作業”,d:“2026-07-11”,r:“kumi_one”,desc:“組役員1名”},
-{t:“廃品回収（育成会主催）”,d:“2026-07-12”,r:“all_both”,desc:“本部役員(全)・組役員(全)”},
-{t:“中央公園清掃”,d:“2026-07-12”,r:“hq_one”,desc:“本部役員1名”},
-{t:“公民館清掃”,d:“2026-07-19”,r:“chairman”,desc:“会長・副会長”},
-{t:“育成会本部・組役員会議”,d:“2026-07-19”,r:“all_both”,desc:“本部役員(全)・組役員(全)”},
-{t:“夏祭り納涼祭”,d:“2026-07-25”,r:“all_both”,desc:“本部役員(全)・組役員(全)”},
-{t:“夏祭り納涼祭後片付け”,d:“2026-07-26”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“ラジオ体操①”,d:“2026-08-01”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“ふれあい学びやきたしろた”,d:“2026-08-03”,r:“all_hq”,desc:“本部役員(全) ※8/3〜8/28”},
-{t:“町内書画展”,d:“2026-08-03”,r:“chairman”,desc:“会長”},
-{t:“南子連定例会議”,d:“2026-08-06”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“ラジオ体操②”,d:“2026-08-08”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“赤城白川除草作業”,d:“2026-08-08”,r:“kumi_one”,desc:“組役員1名”},
-{t:“中央公園清掃”,d:“2026-08-09”,r:“hq_one”,desc:“本部役員1名”},
-{t:“ラジオ体操③”,d:“2026-08-15”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“4団体会議（納涼祭反省会・町内運動会）”,d:“2026-08-16”,r:“chairman”,desc:“会長・副会長”},
-{t:“ラジオ体操④”,d:“2026-08-22”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“南子連書画展”,d:“2026-08-22”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“南橘地区市民スポーツ祭”,d:“2026-08-22”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“ラジオ体操⑤”,d:“2026-08-29”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“4団体会議（町内運動会）”,d:“2026-08-29”,r:“chairman”,desc:“会長・副会長”},
-{t:“南子連定例会議”,d:“2026-09-03”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“赤城白川除草作業”,d:“2026-09-12”,r:“kumi_one”,desc:“組役員1名”},
-{t:“廃品回収（体協主催）”,d:“2026-09-13”,r:“chairman”,desc:“会長・本部役員2名”},
-{t:“中央公園清掃”,d:“2026-09-13”,r:“hq_one”,desc:“本部役員1名”},
-{t:“4団体会議（町内運動会）”,d:“2026-09-19”,r:“chairman”,desc:“会長・副会長”},
-{t:“のびゆくこどものつどい”,d:“2026-09-19”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“育成会本部会議”,d:“2026-09-20”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“南子連定例会議”,d:“2026-10-01”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“町民運動会前日準備”,d:“2026-10-03”,r:“chairman”,desc:“会長”},
-{t:“町民運動会”,d:“2026-10-04”,r:“all_hq”,desc:“会長・本部役員(全)”},
-{t:“赤城白川除草作業”,d:“2026-10-10”,r:“kumi_one”,desc:“組役員1名”},
-{t:“中央公園清掃”,d:“2026-10-11”,r:“hq_one”,desc:“本部役員1名”},
-{t:“育成会本部会議”,d:“2026-10-18”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“南橘地区文化祭”,d:“2026-10-24”,r:“nanako”,desc:“南子連役員 ※10/24-25”},
-{t:“防災訓練会議”,d:“2026-10-24”,r:“chairman”,desc:“会長・副会長”},
-{t:“さつま芋掘り体験”,d:“2026-10-25”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“4団体会議（クリスマス会）”,d:“2026-11-02”,r:“chairman”,desc:“会長・副会長”},
-{t:“南子連定例会議”,d:“2026-11-05”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“4団体会議（スポーツ祭）”,d:“2026-11-07”,r:“chairman”,desc:“会長・副会長”},
-{t:“廃品回収（育成会主催）”,d:“2026-11-08”,r:“all_both”,desc:“本部役員(全)・組役員(全)”},
-{t:“防災訓練”,d:“2026-11-15”,r:“chairman”,desc:“会長・副会長”},
-{t:“南橘地区市民スポーツ祭”,d:“2026-11-28”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“しめ縄作り体験”,d:“2026-11-29”,r:“chairman”,desc:“会長”},
-{t:“南子連定例会議”,d:“2026-12-03”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“育成会本部・組役員会議”,d:“2026-12-07”,r:“all_both”,desc:“本部役員(全)・組役員(全)”},
-{t:“クリスマス会準備”,d:“2026-12-12”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“クリスマス会”,d:“2026-12-13”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“年末餅つき大会準備”,d:“2026-12-26”,r:“chairman”,desc:“会長”},
-{t:“年末餅つき大会”,d:“2026-12-27”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“南子連定例会議”,d:“2027-01-07”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“廃品回収（体協主催）”,d:“2027-01-10”,r:“chairman”,desc:“会長・本部役員2名”},
-{t:“ボッチャ講習会”,d:“2027-01-23”,r:“chairman”,desc:“会長”},
-{t:“育成会本部役員選考会”,d:“2027-01-23”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“前橋市子連上毛かるた大会”,d:“2027-01-24”,r:“nanako”,desc:“本部役員・南子連役員”},
-{t:“南子連定例会議”,d:“2027-02-04”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“育成会本部役員会議”,d:“2027-02-07”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“バレンタインチョコづくり教室”,d:“2027-02-13”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“青色防犯パトロール会議”,d:“2027-02-14”,r:“chairman”,desc:“会長”},
-{t:“南子連こどもスケート教室”,d:“2027-02-20”,r:“nanako”,desc:“南子連役員”},
-{t:“南橘地区ミニバス大会”,d:“2027-02-22”,r:“nanako”,desc:“南子連役員 ※2/22-23”},
-{t:“南子連定例会議”,d:“2027-03-04”,r:“nanako”,desc:“会長・南子連役員”},
-{t:“中央公園清掃”,d:“2027-03-07”,r:“hq_one”,desc:“本部役員1名”},
-{t:“4団体会議 総会”,d:“2027-03-07”,r:“chairman”,desc:“会長・副会長”},
-{t:“エコの会総会”,d:“2027-03-13”,r:“chairman”,desc:“会長”},
-{t:“育成会総会”,d:“2027-03-14”,r:“all_both”,desc:“本部役員(全)・組役員(全)”},
-{t:“じゃが芋種芋植え”,d:“2027-03-21”,r:“all_hq”,desc:“本部役員(全)”},
-{t:“公園愛護会総会”,d:“2027-03-27”,r:“chairman”,desc:“会長”}
+{id:“e1”,t:“南子連定期総会”,d:“2026-04-11”,r:“南子連”,done:false},
+{id:“e2”,t:“赤城白川除草作業”,d:“2026-04-11”,r:“組役員”,done:false},
+{id:“e3”,t:“中央公園清掃”,d:“2026-04-12”,r:“本部役員”,done:false},
+{id:“e4”,t:“育成会本部会議”,d:“2026-04-19”,r:“本部役員(全)”,done:false},
+{id:“e5”,t:“各種団体合同会議”,d:“2026-05-09”,r:“会長”,done:false},
+{id:“e6”,t:“赤城白川除草作業”,d:“2026-05-09”,r:“組役員”,done:false},
+{id:“e7”,t:“廃品回収（体協主催）”,d:“2026-05-10”,r:“会長”,done:false},
+{id:“e8”,t:“南子連定例会議”,d:“2026-05-14”,r:“南子連”,done:false},
+{id:“e9”,t:“育成会本部会議”,d:“2026-05-17”,r:“本部役員(全)”,done:false},
+{id:“e10”,t:“さつま苗植え”,d:“2026-05-23”,r:“本部役員(全)”,done:false},
+{id:“e11”,t:“社会福祉協議会総会”,d:“2026-05-24”,r:“会長”,done:false},
+{id:“e12”,t:“細井ヴィクトリー総会”,d:“2026-05-24”,r:“会長”,done:false}
 ];
 
-var PATH=“ikuseikai-schedule”;
-function clone(o){return JSON.parse(JSON.stringify(o))}
-function fmtInit(){var a=[];INIT.forEach(function(ev,i){a.push({id:“ev”+i,t:ev.t,d:ev.d,r:ev.r,desc:ev.desc,done:false})});return a}
+var WDAYS=[“月”,“火”,“水”,“木”,“金”,“土”,“日”];
+var COLORS={“会長”:”#C41E3A”,“本部役員(全)”:”#D97706”,“本部役員”:”#EA580C”,“組役員”:”#059669”,“南子連”:”#6B21A8”};
+
 function pad(n){return n<10?“0”+n:””+n}
-function toKey(y,m,d){return y+”-”+pad(m+1)+”-”+pad(d)}
+function dk(y,m,d){return y+”-”+pad(m+1)+”-”+pad(d)}
 
 function App(){
-var _ev=useState(null),events=_ev[0],setEvents=_ev[1];
-var _ld=useState(true),loading=_ld[0],setLoading=_ld[1];
-var _co=useState(true),connected=_co[0],setConnected=_co[1];
-var now=new Date();
-var _yr=useState(now.getFullYear()),year=_yr[0],setYear=_yr[1];
-var _mo=useState(now.getMonth()),month=_mo[0],setMonth=_mo[1];
-var _sel=useState(null),selDate=_sel[0],setSelDate=_sel[1];
-var _sh=useState(false),showForm=_sh[0],setShowForm=_sh[1];
-var _edit=useState(null),editEv=_edit[0],setEditEv=_edit[1];
-var _ft=useState(””),formTitle=_ft[0],setFormTitle=_ft[1];
-var _fd=useState(””),formDate=_fd[0],setFormDate=_fd[1];
-var _fr=useState(“all_hq”),formRole=_fr[0],setFormRole=_fr[1];
-var _fds=useState(””),formDesc=_fds[0],setFormDesc=_fds[1];
-var _cdel=useState(null),confirmDel=_cdel[0],setConfirmDel=_cdel[1];
-var _filt=useState(“all”),filter=_filt[0],setFilter=_filt[1];
+var st1=React.useState(null);var events=st1[0];var setEvents=st1[1];
+var st2=React.useState(true);var loading=st2[0];var setLoading=st2[1];
+var st3=React.useState(2026);var year=st3[0];var setYear=st3[1];
+var st4=React.useState(3);var month=st4[0];var setMonth=st4[1];
+var st5=React.useState(null);var sel=st5[0];var setSel=st5[1];
+var st6=React.useState(””);var err=st6[0];var setErr=st6[1];
 
-useEffect(function(){
-var ref=db.ref(PATH);
-db.ref(”.info/connected”).on(“value”,function(s){setConnected(!!s.val())});
+React.useEffect(function(){
+var ref=db.ref(“ikuseikai-schedule”);
 ref.on(“value”,function(snap){
 var d=snap.val();
-if(d){setEvents(d)}else{var init=fmtInit();ref.set(init);setEvents(init)}
+if(d){
+if(Array.isArray(d)){setEvents(d);}
+else{var arr=[];Object.keys(d).forEach(function(k){arr.push(d[k]);});setEvents(arr);}
+}else{
+ref.set(INIT);setEvents(INIT);
+}
 setLoading(false);
-},function(){setEvents(fmtInit());setLoading(false)});
-return function(){ref.off()};
+},function(error){
+setErr(“DB error: “+error.message);
+setEvents(INIT);
+setLoading(false);
+});
+return function(){ref.off();};
 },[]);
 
-var save=useCallback(function(ev){setEvents(ev);db.ref(PATH).set(ev)},[]);
+if(err){return h(“div”,{style:{padding:20,color:“red”,fontSize:14}},err);}
+if(loading||!events){return h(“div”,{style:{padding:40,textAlign:“center”,color:”#999”}},“読み込み中…”);}
 
-function prevMonth(){if(month===0){setMonth(11);setYear(year-1)}else{setMonth(month-1)}setSelDate(null)}
-function nextMonth(){if(month===11){setMonth(0);setYear(year+1)}else{setMonth(month+1)}setSelDate(null)}
-function goToday(){setYear(now.getFullYear());setMonth(now.getMonth());setSelDate(toKey(now.getFullYear(),now.getMonth(),now.getDate()))}
+var MNAMES=[“1月”,“2月”,“3月”,“4月”,“5月”,“6月”,“7月”,“8月”,“9月”,“10月”,“11月”,“12月”];
+var dim=new Date(year,month+1,0).getDate();
+var sd=(new Date(year,month,1).getDay()+6)%7;
 
-function toggleDone(evId){var u=clone(events);u=u.map(function(ev){return ev.id===evId?Object.assign({},ev,{done:!ev.done}):ev});save(u)}
-function openAdd(dateStr){setEditEv(null);setFormTitle(””);setFormDate(dateStr||toKey(year,month,15));setFormRole(“all_hq”);setFormDesc(””);setShowForm(true)}
-function openEdit(ev){setEditEv(ev);setFormTitle(ev.t);setFormDate(ev.d);setFormRole(ev.r);setFormDesc(ev.desc||””);setShowForm(true)}
-function saveForm(){
-if(!formTitle.trim()||!formDate)return;
-var u=clone(events);
-if(editEv){u=u.map(function(ev){return ev.id===editEv.id?Object.assign({},ev,{t:formTitle.trim(),d:formDate,r:formRole,desc:formDesc.trim()}):ev})}
-else{u.push({id:“ev”+Date.now(),t:formTitle.trim(),d:formDate,r:formRole,desc:formDesc.trim(),done:false})}
-save(u);setShowForm(false)
-}
-function delEvent(evId){var u=clone(events).filter(function(ev){return ev.id!==evId});save(u);setConfirmDel(null)}
+var bd={};
+events.forEach(function(ev){if(!bd[ev.d]){bd[ev.d]=[];}bd[ev.d].push(ev);});
 
-if(loading||!events){return e(“div”,{style:{display:“flex”,alignItems:“center”,justifyContent:“center”,height:“100vh”}},e(“div”,{style:{textAlign:“center”}},e(“div”,{style:{fontSize:40,marginBottom:12}},“📅”),e(“p”,{style:{color:”#78716C”,fontSize:14}},“読み込み中…”)))}
-
-// Build calendar
-var firstDay=new Date(year,month,1);
-var lastDay=new Date(year,month+1,0);
-var startDow=(firstDay.getDay()+6)%7;
-var daysInMonth=lastDay.getDate();
-var todayKey=toKey(now.getFullYear(),now.getMonth(),now.getDate());
-
-// Group events by date
-var evByDate={};
-events.forEach(function(ev){if(!evByDate[ev.d])evByDate[ev.d]=[];evByDate[ev.d].push(ev)});
-
-// Selected date events
-var selEvents=selDate&&evByDate[selDate]?evByDate[selDate]:[];
-if(filter!==“all”){selEvents=selEvents.filter(function(ev){return ev.r===filter})}
-
-// Count events this month
-var monthEvCount=0;
-for(var dd=1;dd<=daysInMonth;dd++){var k=toKey(year,month,dd);if(evByDate[k])monthEvCount+=evByDate[k].length}
-
-// Calendar grid
 var cells=[];
-for(var i=0;i<startDow;i++)cells.push(null);
-for(var d=1;d<=daysInMonth;d++)cells.push(d);
-while(cells.length%7!==0)cells.push(null);
+var i;
+for(i=0;i<sd;i++){cells.push(null);}
+for(i=1;i<=dim;i++){cells.push(i);}
+while(cells.length%7!==0){cells.push(null);}
 
-return e(“div”,null,
-!connected&&e(“div”,{style:{background:”#FFFBEB”,padding:“6px 16px”,textAlign:“center”,fontSize:11,color:”#92400E”}},“⚠️ オフライン — 再接続中…”),
+var sevs=sel&&bd[sel]?bd[sel]:[];
 
-// Header
-e(“div”,{style:{background:“linear-gradient(135deg,#1C1917,#292524)”,padding:“20px 20px 16px”,color:”#fff”}},
-e(“div”,{style:{display:“flex”,justifyContent:“space-between”,alignItems:“center”,marginBottom:12}},
-e(“div”,null,
-e(“div”,{style:{fontSize:11,letterSpacing:2,color:”#A8A29E”,marginBottom:4}},“北代田町子ども育成会”),
-e(“h1”,{style:{fontSize:20,fontWeight:700}},“📅 スケジュール”)),
-e(“a”,{href:”./index.html”,className:“action-btn”,style:{padding:“6px 14px”,borderRadius:8,background:“rgba(255,255,255,.15)”,color:”#fff”,fontSize:11,fontWeight:500,textDecoration:“none”,display:“inline-block”}},“📋 ToDoリスト”)),
-e(“div”,{style:{fontSize:11,color:”#A8A29E”}},“令和8年度（2026年4月〜2027年3月）・”+events.length+“件登録済”)),
+function prevM(){if(month===0){setMonth(11);setYear(year-1);}else{setMonth(month-1);}setSel(null);}
+function nextM(){if(month===11){setMonth(0);setYear(year+1);}else{setMonth(month+1);}setSel(null);}
+function tog(id){
+var u=events.map(function(ev){return ev.id===id?{id:ev.id,t:ev.t,d:ev.d,r:ev.r,done:!ev.done}:ev;});
+setEvents(u);db.ref(“ikuseikai-schedule”).set(u);
+}
 
-// Month nav
-e(“div”,{style:{display:“flex”,alignItems:“center”,justifyContent:“space-between”,padding:“12px 16px”,background:”#fff”,borderBottom:“1px solid #E7E5E4”}},
-e(“button”,{className:“action-btn”,onClick:prevMonth,style:{padding:“6px 12px”,borderRadius:8,background:”#F5F5F4”,color:”#57534E”,fontSize:16}},“←”),
-e(“div”,{style:{textAlign:“center”}},
-e(“div”,{style:{fontSize:18,fontWeight:700,color:”#1C1917”}},year+“年 “+MNAMES[month]),
-e(“div”,{style:{fontSize:11,color:”#A8A29E”}},monthEvCount+“件の予定”)),
-e(“button”,{className:“action-btn”,onClick:nextMonth,style:{padding:“6px 12px”,borderRadius:8,background:”#F5F5F4”,color:”#57534E”,fontSize:16}},“→”)),
+var mc=0;
+for(var dd=1;dd<=dim;dd++){var kk=dk(year,month,dd);if(bd[kk]){mc+=bd[kk].length;}}
 
-// Today button
-e(“div”,{style:{textAlign:“center”,padding:“8px”}},
-e(“button”,{className:“action-btn”,onClick:goToday,style:{padding:“4px 16px”,borderRadius:99,background:”#1C1917”,color:”#fff”,fontSize:11,fontWeight:500}},“今日”)),
+return h(“div”,null,
+h(“div”,{style:{background:”#1C1917”,padding:“20px”,color:”#fff”}},
+h(“div”,{style:{display:“flex”,justifyContent:“space-between”,alignItems:“center”}},
+h(“div”,null,
+h(“div”,{style:{fontSize:11,color:”#A8A29E”,marginBottom:4}},“北代田町子ども育成会”),
+h(“div”,{style:{fontSize:20,fontWeight:700}},“📅 スケジュール”)),
+h(“a”,{href:”./index.html”,style:{color:”#fff”,fontSize:11,padding:“6px 12px”,background:“rgba(255,255,255,.15)”,borderRadius:8,textDecoration:“none”}},“📋 ToDo”)),
+h(“div”,{style:{fontSize:11,color:”#A8A29E”,marginTop:8}},“令和8年度 ・ “+events.length+“件”)),
 
-// Calendar
-e(“div”,{style:{padding:“0 8px”}},
-// Weekday headers
-e(“div”,{style:{display:“grid”,gridTemplateColumns:“repeat(7,1fr)”,gap:1,marginBottom:2}},
-WDAY.map(function(w,i){return e(“div”,{key:w,style:{textAlign:“center”,fontSize:11,fontWeight:600,color:i===5?”#1A4B8C”:i===6?”#C41E3A”:”#78716C”,padding:“4px 0”}},w)})),
-// Days
-e(“div”,{style:{display:“grid”,gridTemplateColumns:“repeat(7,1fr)”,gap:1}},
-cells.map(function(day,i){
-if(!day)return e(“div”,{key:“e”+i,style:{minHeight:48}});
-var key=toKey(year,month,day);
-var isToday=key===todayKey;
-var isSel=key===selDate;
-var dayEv=evByDate[key]||[];
-var dow=i%7;
-return e(“div”,{key:key,className:“cal-cell”,onClick:function(){setSelDate(isSel?null:key)},
-style:{minHeight:48,padding:“2px”,borderRadius:8,background:isSel?”#1C1917”:isToday?”#FEF3C7”:“transparent”,position:“relative”,display:“flex”,flexDirection:“column”,alignItems:“center”}},
-e(“div”,{style:{fontSize:13,fontWeight:isToday||isSel?700:400,color:isSel?”#fff”:isToday?”#92400E”:dow===5?”#1A4B8C”:dow===6?”#C41E3A”:”#1C1917”,marginBottom:2}},day),
-dayEv.length>0&&e(“div”,{style:{display:“flex”,gap:2,flexWrap:“wrap”,justifyContent:“center”}},
-dayEv.slice(0,3).map(function(ev,j){return e(“div”,{key:j,style:{width:6,height:6,borderRadius:99,background:RC[ev.r]?RC[ev.r].color:”#6B7280”}})}),
-dayEv.length>3&&e(“div”,{style:{fontSize:8,color:isSel?”#A8A29E”:”#78716C”}},”+”+String(dayEv.length-3))))
+h(“div”,{style:{display:“flex”,justifyContent:“space-between”,alignItems:“center”,padding:“12px 16px”,background:”#fff”,borderBottom:“1px solid #eee”}},
+h(“button”,{onClick:prevM,style:{padding:“6px 14px”,background:”#f5f5f4”,borderRadius:8,fontSize:16}},“←”),
+h(“div”,{style:{textAlign:“center”}},
+h(“div”,{style:{fontSize:18,fontWeight:700}},year+“年 “+MNAMES[month]),
+h(“div”,{style:{fontSize:11,color:”#aaa”}},mc+“件”)),
+h(“button”,{onClick:nextM,style:{padding:“6px 14px”,background:”#f5f5f4”,borderRadius:8,fontSize:16}},“→”)),
+
+h(“div”,{style:{padding:“0 8px”}},
+h(“div”,{style:{display:“grid”,gridTemplateColumns:“repeat(7,1fr)”,gap:1,margin:“8px 0 2px”}},
+WDAYS.map(function(w,wi){return h(“div”,{key:w,style:{textAlign:“center”,fontSize:11,fontWeight:600,color:wi===5?”#1A4B8C”:wi===6?”#C41E3A”:”#888”}},w);})),
+h(“div”,{style:{display:“grid”,gridTemplateColumns:“repeat(7,1fr)”,gap:1}},
+cells.map(function(day,ci){
+if(!day){return h(“div”,{key:“x”+ci,style:{minHeight:46}});}
+var key=dk(year,month,day);
+var isSel=key===sel;
+var devs=bd[key]||[];
+var dow=ci%7;
+return h(“div”,{key:key,onClick:function(){setSel(isSel?null:key);},
+style:{minHeight:46,padding:2,borderRadius:8,background:isSel?”#1C1917”:“transparent”,cursor:“pointer”,display:“flex”,flexDirection:“column”,alignItems:“center”}},
+h(“div”,{style:{fontSize:13,fontWeight:isSel?700:400,color:isSel?”#fff”:dow===5?”#1A4B8C”:dow===6?”#C41E3A”:”#333”}},day),
+devs.length>0&&h(“div”,{style:{display:“flex”,gap:2,marginTop:2}},
+devs.slice(0,3).map(function(ev,j){return h(“div”,{key:j,style:{width:6,height:6,borderRadius:99,background:COLORS[ev.r]||”#888”}});})));
 }))),
 
-// Selected date events
-selDate&&e(“div”,{style:{padding:“12px 16px”,animation:“fadeIn .3s ease”}},
-e(“div”,{style:{display:“flex”,justifyContent:“space-between”,alignItems:“center”,marginBottom:8}},
-e(“h3”,{style:{fontSize:14,fontWeight:600,color:”#1C1917”}},
-parseInt(selDate.split(”-”)[1])+“月”+parseInt(selDate.split(”-”)[2])+“日の予定”+(evByDate[selDate]?” (”+evByDate[selDate].length+“件)”:””)),
-e(“button”,{className:“action-btn”,onClick:function(){openAdd(selDate)},style:{padding:“4px 12px”,borderRadius:6,background:”#1C1917”,color:”#fff”,fontSize:11,fontWeight:600}},”+追加”)),
+sel&&h(“div”,{style:{padding:“12px 16px”}},
+h(“div”,{style:{fontSize:14,fontWeight:600,marginBottom:8}},parseInt(sel.split(”-”)[1])+“月”+parseInt(sel.split(”-”)[2])+“日”+(bd[sel]?” (”+bd[sel].length+“件)”:””)),
+sevs.length===0&&h(“p”,{style:{color:”#aaa”,fontSize:13,textAlign:“center”,padding:16}},“予定なし”),
+sevs.map(function(ev){
+var col=COLORS[ev.r]||”#888”;
+return h(“div”,{key:ev.id,style:{background:”#fff”,borderRadius:10,padding:“10px 12px”,marginBottom:6,border:“1px solid #eee”,opacity:ev.done?0.5:1}},
+h(“div”,{style:{display:“flex”,gap:10,alignItems:“flex-start”}},
+h(“button”,{onClick:function(){tog(ev.id);},
+style:{width:22,height:22,borderRadius:6,border:“2px solid “+(ev.done?col:”#ccc”),background:ev.done?col:“transparent”,flexShrink:0,color:”#fff”,fontSize:11,display:“flex”,alignItems:“center”,justifyContent:“center”}},ev.done?“✓”:null),
+h(“div”,{style:{flex:1}},
+h(“span”,{style:{fontSize:10,padding:“1px 8px”,borderRadius:99,background:col+“18”,color:col,fontWeight:600}},ev.r),
+h(“p”,{style:{fontSize:13,fontWeight:500,marginTop:3,color:ev.done?”#aaa”:”#333”,textDecoration:ev.done?“line-through”:“none”}},ev.t))));})),
 
-```
-// Role filter for selected date
-(evByDate[selDate]&&evByDate[selDate].length>2)&&e("div",{style:{display:"flex",gap:4,marginBottom:8,overflowX:"auto",flexWrap:"wrap"}},
-  e("button",{className:"action-btn",onClick:function(){setFilter("all")},style:{padding:"3px 10px",borderRadius:99,background:filter==="all"?"#1C1917":"#F5F5F4",color:filter==="all"?"#fff":"#78716C",fontSize:10}},
-    "全て"),
-  ROLES.map(function(r){
-    var hasRole=evByDate[selDate]&&evByDate[selDate].some(function(ev){return ev.r===r.id});
-    if(!hasRole)return null;
-    return e("button",{key:r.id,className:"action-btn",onClick:function(){setFilter(filter===r.id?"all":r.id)},
-      style:{padding:"3px 10px",borderRadius:99,background:filter===r.id?r.color:"#F5F5F4",color:filter===r.id?"#fff":"#78716C",fontSize:10}},r.label)
-  })),
+!sel&&h(“div”,{style:{textAlign:“center”,padding:30,color:”#aaa”}},
+h(“div”,{style:{fontSize:28,marginBottom:8}},“👆”),
+h(“p”,{style:{fontSize:13}},“日付をタップして予定を確認”)),
 
-selEvents.length===0&&e("div",{style:{textAlign:"center",padding:"20px",color:"#A8A29E",fontSize:13}},filter!=="all"?"該当する予定はありません":"予定はありません"),
-
-selEvents.map(function(ev){
-  var rc=RC[ev.r]||RC.other;
-  return e("div",{key:ev.id,style:{background:"#fff",borderRadius:12,padding:"12px 14px",marginBottom:6,boxShadow:"0 1px 3px rgba(0,0,0,.04)",border:"1px solid #E7E5E4",opacity:ev.done?.5:1,animation:"fadeIn .3s ease"}},
-    confirmDel===ev.id&&e("div",{style:{background:"#FEF2F2",borderRadius:8,padding:"8px 10px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,flexWrap:"wrap"}},
-      e("span",{style:{fontSize:11,color:"#DC2626",fontWeight:500}},"削除しますか？"),
-      e("div",{style:{display:"flex",gap:4}},
-        e("button",{className:"action-btn",onClick:function(){delEvent(ev.id)},style:{padding:"4px 12px",borderRadius:6,background:"#DC2626",color:"#fff",fontSize:11,fontWeight:600}},"削除"),
-        e("button",{className:"action-btn",onClick:function(){setConfirmDel(null)},style:{padding:"4px 10px",borderRadius:6,background:"#fff",color:"#78716C",border:"1px solid #E7E5E4",fontSize:11}},"戻る"))),
-    e("div",{style:{display:"flex",gap:10,alignItems:"flex-start"}},
-      e("button",{className:"action-btn",onClick:function(){toggleDone(ev.id)},
-        style:{width:22,height:22,borderRadius:6,border:"2px solid "+(ev.done?rc.color:"#D6D3D1"),background:ev.done?rc.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,color:"#fff",fontSize:12}},ev.done?"✓":null),
-      e("div",{style:{flex:1,minWidth:0}},
-        e("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:3}},
-          e("span",{style:{fontSize:10,padding:"1px 8px",borderRadius:99,background:rc.color+"18",color:rc.color,fontWeight:600}},rc.label),
-          ev.done&&e("span",{style:{fontSize:10,color:"#A8A29E"}},"完了")),
-        e("p",{style:{fontSize:13,fontWeight:500,color:ev.done?"#A8A29E":"#1C1917",textDecoration:ev.done?"line-through":"none",lineHeight:1.4}},ev.t),
-        ev.desc&&e("p",{style:{fontSize:11,color:"#A8A29E",marginTop:2}},ev.desc)),
-      e("div",{style:{display:"flex",gap:3,flexShrink:0}},
-        e("button",{className:"action-btn",onClick:function(){openEdit(ev)},style:{width:26,height:26,borderRadius:6,border:"1px solid #E7E5E4",background:"#fff",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}},"✏️"),
-        e("button",{className:"action-btn",onClick:function(){setConfirmDel(confirmDel===ev.id?null:ev.id)},style:{width:26,height:26,borderRadius:6,border:"1px solid #E7E5E4",background:confirmDel===ev.id?"#FEF2F2":"#fff",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}},"🗑"))))
-})),
-```
-
-// No date selected hint
-!selDate&&e(“div”,{style:{textAlign:“center”,padding:“30px 20px”,color:”#A8A29E”}},
-e(“div”,{style:{fontSize:28,marginBottom:8}},“👆”),
-e(“p”,{style:{fontSize:13}},“日付をタップして予定を確認”)),
-
-// Add/Edit modal
-showForm&&e(“div”,{className:“overlay”,onClick:function(){setShowForm(false)}},
-e(“div”,{className:“modal”,onClick:function(ev){ev.stopPropagation()}},
-e(“h3”,{style:{fontSize:16,fontWeight:600,color:”#1C1917”,marginBottom:16}},editEv?“予定を編集”:“予定を追加”),
-e(“div”,{style:{marginBottom:12}},
-e(“label”,{style:{fontSize:11,color:”#78716C”,display:“block”,marginBottom:4}},“イベント名”),
-e(“input”,{value:formTitle,onChange:function(ev){setFormTitle(ev.target.value)},placeholder:“例: 育成会本部会議”,
-style:{width:“100%”,padding:“8px 12px”,border:“1px solid #E7E5E4”,borderRadius:8,fontSize:14,outline:“none”}})),
-e(“div”,{style:{marginBottom:12}},
-e(“label”,{style:{fontSize:11,color:”#78716C”,display:“block”,marginBottom:4}},“日付”),
-e(“input”,{type:“date”,value:formDate,onChange:function(ev){setFormDate(ev.target.value)},
-style:{width:“100%”,padding:“8px 12px”,border:“1px solid #E7E5E4”,borderRadius:8,fontSize:14,outline:“none”}})),
-e(“div”,{style:{marginBottom:12}},
-e(“label”,{style:{fontSize:11,color:”#78716C”,display:“block”,marginBottom:4}},“担当”),
-e(“select”,{value:formRole,onChange:function(ev){setFormRole(ev.target.value)},
-style:{width:“100%”,padding:“8px 12px”,border:“1px solid #E7E5E4”,borderRadius:8,fontSize:14,outline:“none”,background:”#fff”}},
-ROLES.map(function(r){return e(“option”,{key:r.id,value:r.id},r.label)}))),
-e(“div”,{style:{marginBottom:16}},
-e(“label”,{style:{fontSize:11,color:”#78716C”,display:“block”,marginBottom:4}},“備考”),
-e(“input”,{value:formDesc,onChange:function(ev){setFormDesc(ev.target.value)},placeholder:“例: 本部役員(全)”,
-style:{width:“100%”,padding:“8px 12px”,border:“1px solid #E7E5E4”,borderRadius:8,fontSize:14,outline:“none”}})),
-e(“div”,{style:{display:“flex”,gap:8,justifyContent:“flex-end”}},
-e(“button”,{className:“action-btn”,onClick:function(){setShowForm(false)},style:{padding:“8px 16px”,borderRadius:8,background:”#F5F5F4”,color:”#78716C”,fontSize:13}},“キャンセル”),
-e(“button”,{className:“action-btn”,onClick:saveForm,style:{padding:“8px 20px”,borderRadius:8,background:”#1C1917”,color:”#fff”,fontSize:13,fontWeight:600}},“保存”)))),
-
-// FAB
-e(“div”,{style:{position:“fixed”,bottom:20,right:20,zIndex:100}},
-e(“button”,{className:“action-btn”,onClick:function(){openAdd(selDate)},
-style:{width:56,height:56,borderRadius:99,background:”#1C1917”,color:”#fff”,fontSize:24,display:“flex”,alignItems:“center”,justifyContent:“center”,boxShadow:“0 4px 16px rgba(0,0,0,.3)”}},”+”))
-)
+h(“div”,{style:{height:40}})
+);
 }
-ReactDOM.createRoot(document.getElementById(“root”)).render(e(App));
+
+ReactDOM.createRoot(document.getElementById(“app”)).render(h(App));
 </script>
 
 </body>
