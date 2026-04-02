@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -23,38 +22,38 @@ var h=React.createElement;
 
 try{
 firebase.initializeApp({
-apiKey:“AIzaSyDjy8CyAUCWtkRKx0HoUUra-p6qFqIE16Y”,
-authDomain:“ikuseikai-todo.firebaseapp.com”,
-databaseURL:“https://ikuseikai-todo-default-rtdb.firebaseio.com”,
-projectId:“ikuseikai-todo”,
-storageBucket:“ikuseikai-todo.firebasestorage.app”,
-messagingSenderId:“1057548671972”,
-appId:“1:1057548671972:web:c35d5b1e07d507233805f1”
+apiKey:"AIzaSyDjy8CyAUCWtkRKx0HoUUra-p6qFqIE16Y",
+authDomain:"ikuseikai-todo.firebaseapp.com",
+databaseURL:"https://ikuseikai-todo-default-rtdb.firebaseio.com",
+projectId:"ikuseikai-todo",
+storageBucket:"ikuseikai-todo.firebasestorage.app",
+messagingSenderId:"1057548671972",
+appId:"1:1057548671972:web:c35d5b1e07d507233805f1"
 });
-}catch(e){document.getElementById(“app”).textContent=“Firebase error: “+e.message;}
+}catch(e){document.getElementById("app").textContent="Firebase error: "+e.message;}
 
 var db=firebase.database();
 
 var INIT=[
-{id:“e1”,t:“南子連定期総会”,d:“2026-04-11”,r:“南子連”,done:false},
-{id:“e2”,t:“赤城白川除草作業”,d:“2026-04-11”,r:“組役員”,done:false},
-{id:“e3”,t:“中央公園清掃”,d:“2026-04-12”,r:“本部役員”,done:false},
-{id:“e4”,t:“育成会本部会議”,d:“2026-04-19”,r:“本部役員(全)”,done:false},
-{id:“e5”,t:“各種団体合同会議”,d:“2026-05-09”,r:“会長”,done:false},
-{id:“e6”,t:“赤城白川除草作業”,d:“2026-05-09”,r:“組役員”,done:false},
-{id:“e7”,t:“廃品回収（体協主催）”,d:“2026-05-10”,r:“会長”,done:false},
-{id:“e8”,t:“南子連定例会議”,d:“2026-05-14”,r:“南子連”,done:false},
-{id:“e9”,t:“育成会本部会議”,d:“2026-05-17”,r:“本部役員(全)”,done:false},
-{id:“e10”,t:“さつま苗植え”,d:“2026-05-23”,r:“本部役員(全)”,done:false},
-{id:“e11”,t:“社会福祉協議会総会”,d:“2026-05-24”,r:“会長”,done:false},
-{id:“e12”,t:“細井ヴィクトリー総会”,d:“2026-05-24”,r:“会長”,done:false}
+{id:"e1",t:"南子連定期総会",d:"2026-04-11",r:"南子連",done:false},
+{id:"e2",t:"赤城白川除草作業",d:"2026-04-11",r:"組役員",done:false},
+{id:"e3",t:"中央公園清掃",d:"2026-04-12",r:"本部役員",done:false},
+{id:"e4",t:"育成会本部会議",d:"2026-04-19",r:"本部役員(全)",done:false},
+{id:"e5",t:"各種団体合同会議",d:"2026-05-09",r:"会長",done:false},
+{id:"e6",t:"赤城白川除草作業",d:"2026-05-09",r:"組役員",done:false},
+{id:"e7",t:"廃品回収（体協主催）",d:"2026-05-10",r:"会長",done:false},
+{id:"e8",t:"南子連定例会議",d:"2026-05-14",r:"南子連",done:false},
+{id:"e9",t:"育成会本部会議",d:"2026-05-17",r:"本部役員(全)",done:false},
+{id:"e10",t:"さつま苗植え",d:"2026-05-23",r:"本部役員(全)",done:false},
+{id:"e11",t:"社会福祉協議会総会",d:"2026-05-24",r:"会長",done:false},
+{id:"e12",t:"細井ヴィクトリー総会",d:"2026-05-24",r:"会長",done:false}
 ];
 
-var WDAYS=[“月”,“火”,“水”,“木”,“金”,“土”,“日”];
-var COLORS={“会長”:”#C41E3A”,“本部役員(全)”:”#D97706”,“本部役員”:”#EA580C”,“組役員”:”#059669”,“南子連”:”#6B21A8”};
+var WDAYS=["月","火","水","木","金","土","日"];
+var COLORS={"会長":"#C41E3A","本部役員(全)":"#D97706","本部役員":"#EA580C","組役員":"#059669","南子連":"#6B21A8"};
 
-function pad(n){return n<10?“0”+n:””+n}
-function dk(y,m,d){return y+”-”+pad(m+1)+”-”+pad(d)}
+function pad(n){return n<10?"0"+n:""+n}
+function dk(y,m,d){return y+"-"+pad(m+1)+"-"+pad(d)}
 
 function App(){
 var st1=React.useState(null);var events=st1[0];var setEvents=st1[1];
@@ -62,11 +61,11 @@ var st2=React.useState(true);var loading=st2[0];var setLoading=st2[1];
 var st3=React.useState(2026);var year=st3[0];var setYear=st3[1];
 var st4=React.useState(3);var month=st4[0];var setMonth=st4[1];
 var st5=React.useState(null);var sel=st5[0];var setSel=st5[1];
-var st6=React.useState(””);var err=st6[0];var setErr=st6[1];
+var st6=React.useState("");var err=st6[0];var setErr=st6[1];
 
 React.useEffect(function(){
-var ref=db.ref(“ikuseikai-schedule”);
-ref.on(“value”,function(snap){
+var ref=db.ref("ikuseikai-schedule");
+ref.on("value",function(snap){
 var d=snap.val();
 if(d){
 if(Array.isArray(d)){setEvents(d);}
@@ -76,17 +75,17 @@ ref.set(INIT);setEvents(INIT);
 }
 setLoading(false);
 },function(error){
-setErr(“DB error: “+error.message);
+setErr("DB error: "+error.message);
 setEvents(INIT);
 setLoading(false);
 });
 return function(){ref.off();};
 },[]);
 
-if(err){return h(“div”,{style:{padding:20,color:“red”,fontSize:14}},err);}
-if(loading||!events){return h(“div”,{style:{padding:40,textAlign:“center”,color:”#999”}},“読み込み中…”);}
+if(err){return h("div",{style:{padding:20,color:"red",fontSize:14}},err);}
+if(loading||!events){return h("div",{style:{padding:40,textAlign:"center",color:"#999"}},"読み込み中...");}
 
-var MNAMES=[“1月”,“2月”,“3月”,“4月”,“5月”,“6月”,“7月”,“8月”,“9月”,“10月”,“11月”,“12月”];
+var MNAMES=["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
 var dim=new Date(year,month+1,0).getDate();
 var sd=(new Date(year,month,1).getDay()+6)%7;
 
@@ -105,68 +104,67 @@ function prevM(){if(month===0){setMonth(11);setYear(year-1);}else{setMonth(month
 function nextM(){if(month===11){setMonth(0);setYear(year+1);}else{setMonth(month+1);}setSel(null);}
 function tog(id){
 var u=events.map(function(ev){return ev.id===id?{id:ev.id,t:ev.t,d:ev.d,r:ev.r,done:!ev.done}:ev;});
-setEvents(u);db.ref(“ikuseikai-schedule”).set(u);
+setEvents(u);db.ref("ikuseikai-schedule").set(u);
 }
 
 var mc=0;
 for(var dd=1;dd<=dim;dd++){var kk=dk(year,month,dd);if(bd[kk]){mc+=bd[kk].length;}}
 
-return h(“div”,null,
-h(“div”,{style:{background:”#1C1917”,padding:“20px”,color:”#fff”}},
-h(“div”,{style:{display:“flex”,justifyContent:“space-between”,alignItems:“center”}},
-h(“div”,null,
-h(“div”,{style:{fontSize:11,color:”#A8A29E”,marginBottom:4}},“北代田町子ども育成会”),
-h(“div”,{style:{fontSize:20,fontWeight:700}},“📅 スケジュール”)),
-h(“a”,{href:”./index.html”,style:{color:”#fff”,fontSize:11,padding:“6px 12px”,background:“rgba(255,255,255,.15)”,borderRadius:8,textDecoration:“none”}},“📋 ToDo”)),
-h(“div”,{style:{fontSize:11,color:”#A8A29E”,marginTop:8}},“令和8年度 ・ “+events.length+“件”)),
+return h("div",null,
+h("div",{style:{background:"#1C1917",padding:"20px",color:"#fff"}},
+h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+h("div",null,
+h("div",{style:{fontSize:11,color:"#A8A29E",marginBottom:4}},"北代田町子ども育成会"),
+h("div",{style:{fontSize:20,fontWeight:700}},"📅 スケジュール")),
+h("a",{href:"./index.html",style:{color:"#fff",fontSize:11,padding:"6px 12px",background:"rgba(255,255,255,.15)",borderRadius:8,textDecoration:"none"}},"📋 ToDo")),
+h("div",{style:{fontSize:11,color:"#A8A29E",marginTop:8}},"令和8年度 ・ "+events.length+"件")),
 
-h(“div”,{style:{display:“flex”,justifyContent:“space-between”,alignItems:“center”,padding:“12px 16px”,background:”#fff”,borderBottom:“1px solid #eee”}},
-h(“button”,{onClick:prevM,style:{padding:“6px 14px”,background:”#f5f5f4”,borderRadius:8,fontSize:16}},“←”),
-h(“div”,{style:{textAlign:“center”}},
-h(“div”,{style:{fontSize:18,fontWeight:700}},year+“年 “+MNAMES[month]),
-h(“div”,{style:{fontSize:11,color:”#aaa”}},mc+“件”)),
-h(“button”,{onClick:nextM,style:{padding:“6px 14px”,background:”#f5f5f4”,borderRadius:8,fontSize:16}},“→”)),
+h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"#fff",borderBottom:"1px solid #eee"}},
+h("button",{onClick:prevM,style:{padding:"6px 14px",background:"#f5f5f4",borderRadius:8,fontSize:16}},"←"),
+h("div",{style:{textAlign:"center"}},
+h("div",{style:{fontSize:18,fontWeight:700}},year+"年 "+MNAMES[month]),
+h("div",{style:{fontSize:11,color:"#aaa"}},mc+"件")),
+h("button",{onClick:nextM,style:{padding:"6px 14px",background:"#f5f5f4",borderRadius:8,fontSize:16}},"→")),
 
-h(“div”,{style:{padding:“0 8px”}},
-h(“div”,{style:{display:“grid”,gridTemplateColumns:“repeat(7,1fr)”,gap:1,margin:“8px 0 2px”}},
-WDAYS.map(function(w,wi){return h(“div”,{key:w,style:{textAlign:“center”,fontSize:11,fontWeight:600,color:wi===5?”#1A4B8C”:wi===6?”#C41E3A”:”#888”}},w);})),
-h(“div”,{style:{display:“grid”,gridTemplateColumns:“repeat(7,1fr)”,gap:1}},
+h("div",{style:{padding:"0 8px"}},
+h("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,margin:"8px 0 2px"}},
+WDAYS.map(function(w,wi){return h("div",{key:w,style:{textAlign:"center",fontSize:11,fontWeight:600,color:wi===5?"#1A4B8C":wi===6?"#C41E3A":"#888"}},w);})),
+h("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1}},
 cells.map(function(day,ci){
-if(!day){return h(“div”,{key:“x”+ci,style:{minHeight:46}});}
+if(!day){return h("div",{key:"x"+ci,style:{minHeight:46}});}
 var key=dk(year,month,day);
 var isSel=key===sel;
 var devs=bd[key]||[];
 var dow=ci%7;
-return h(“div”,{key:key,onClick:function(){setSel(isSel?null:key);},
-style:{minHeight:46,padding:2,borderRadius:8,background:isSel?”#1C1917”:“transparent”,cursor:“pointer”,display:“flex”,flexDirection:“column”,alignItems:“center”}},
-h(“div”,{style:{fontSize:13,fontWeight:isSel?700:400,color:isSel?”#fff”:dow===5?”#1A4B8C”:dow===6?”#C41E3A”:”#333”}},day),
-devs.length>0&&h(“div”,{style:{display:“flex”,gap:2,marginTop:2}},
-devs.slice(0,3).map(function(ev,j){return h(“div”,{key:j,style:{width:6,height:6,borderRadius:99,background:COLORS[ev.r]||”#888”}});})));
+return h("div",{key:key,onClick:function(){setSel(isSel?null:key);},
+style:{minHeight:46,padding:2,borderRadius:8,background:isSel?"#1C1917":"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center"}},
+h("div",{style:{fontSize:13,fontWeight:isSel?700:400,color:isSel?"#fff":dow===5?"#1A4B8C":dow===6?"#C41E3A":"#333"}},day),
+devs.length>0&&h("div",{style:{display:"flex",gap:2,marginTop:2}},
+devs.slice(0,3).map(function(ev,j){return h("div",{key:j,style:{width:6,height:6,borderRadius:99,background:COLORS[ev.r]||"#888"}});})));
 }))),
 
-sel&&h(“div”,{style:{padding:“12px 16px”}},
-h(“div”,{style:{fontSize:14,fontWeight:600,marginBottom:8}},parseInt(sel.split(”-”)[1])+“月”+parseInt(sel.split(”-”)[2])+“日”+(bd[sel]?” (”+bd[sel].length+“件)”:””)),
-sevs.length===0&&h(“p”,{style:{color:”#aaa”,fontSize:13,textAlign:“center”,padding:16}},“予定なし”),
+sel&&h("div",{style:{padding:"12px 16px"}},
+h("div",{style:{fontSize:14,fontWeight:600,marginBottom:8}},parseInt(sel.split("-")[1])+"月"+parseInt(sel.split("-")[2])+"日"+(bd[sel]?" ("+bd[sel].length+"件)":"")),
+sevs.length===0&&h("p",{style:{color:"#aaa",fontSize:13,textAlign:"center",padding:16}},"予定なし"),
 sevs.map(function(ev){
-var col=COLORS[ev.r]||”#888”;
-return h(“div”,{key:ev.id,style:{background:”#fff”,borderRadius:10,padding:“10px 12px”,marginBottom:6,border:“1px solid #eee”,opacity:ev.done?0.5:1}},
-h(“div”,{style:{display:“flex”,gap:10,alignItems:“flex-start”}},
-h(“button”,{onClick:function(){tog(ev.id);},
-style:{width:22,height:22,borderRadius:6,border:“2px solid “+(ev.done?col:”#ccc”),background:ev.done?col:“transparent”,flexShrink:0,color:”#fff”,fontSize:11,display:“flex”,alignItems:“center”,justifyContent:“center”}},ev.done?“✓”:null),
-h(“div”,{style:{flex:1}},
-h(“span”,{style:{fontSize:10,padding:“1px 8px”,borderRadius:99,background:col+“18”,color:col,fontWeight:600}},ev.r),
-h(“p”,{style:{fontSize:13,fontWeight:500,marginTop:3,color:ev.done?”#aaa”:”#333”,textDecoration:ev.done?“line-through”:“none”}},ev.t))));})),
+var col=COLORS[ev.r]||"#888";
+return h("div",{key:ev.id,style:{background:"#fff",borderRadius:10,padding:"10px 12px",marginBottom:6,border:"1px solid #eee",opacity:ev.done?0.5:1}},
+h("div",{style:{display:"flex",gap:10,alignItems:"flex-start"}},
+h("button",{onClick:function(){tog(ev.id);},
+style:{width:22,height:22,borderRadius:6,border:"2px solid "+(ev.done?col:"#ccc"),background:ev.done?col:"transparent",flexShrink:0,color:"#fff",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}},ev.done?"✓":null),
+h("div",{style:{flex:1}},
+h("span",{style:{fontSize:10,padding:"1px 8px",borderRadius:99,background:col+"18",color:col,fontWeight:600}},ev.r),
+h("p",{style:{fontSize:13,fontWeight:500,marginTop:3,color:ev.done?"#aaa":"#333",textDecoration:ev.done?"line-through":"none"}},ev.t))));})),
 
-!sel&&h(“div”,{style:{textAlign:“center”,padding:30,color:”#aaa”}},
-h(“div”,{style:{fontSize:28,marginBottom:8}},“👆”),
-h(“p”,{style:{fontSize:13}},“日付をタップして予定を確認”)),
+!sel&&h("div",{style:{textAlign:"center",padding:30,color:"#aaa"}},
+h("div",{style:{fontSize:28,marginBottom:8}},"👆"),
+h("p",{style:{fontSize:13}},"日付をタップして予定を確認")),
 
-h(“div”,{style:{height:40}})
+h("div",{style:{height:40}})
 );
 }
 
-ReactDOM.createRoot(document.getElementById(“app”)).render(h(App));
+ReactDOM.createRoot(document.getElementById("app")).render(h(App));
 </script>
-
 </body>
 </html>
